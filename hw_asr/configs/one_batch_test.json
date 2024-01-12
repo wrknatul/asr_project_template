@@ -15,10 +15,10 @@
     "spectrogram": []
   },
   "arch": {
-    "type": "BaselineModel",
+    "type": "DeepSpeech2",
     "args": {
       "n_feats": 128,
-      "fc_hidden": 512
+      "fc_hidden": 32
     }
   },
   "data": {
@@ -81,14 +81,14 @@
     "type": "OneCycleLR",
     "args": {
       "steps_per_epoch": 100,
-      "epochs": 50,
+      "epochs": 4,
       "anneal_strategy": "cos",
       "max_lr": 1e-2,
       "pct_start": 0.2
     }
   },
   "trainer": {
-    "epochs": 50,
+    "epochs": 4,
     "save_dir": "saved/",
     "save_period": 5,
     "verbosity": 2,
