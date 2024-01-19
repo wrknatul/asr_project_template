@@ -1,0 +1,106 @@
+{
+    "name": "second_attemp",
+    "n_gpu": 1,
+    "preprocessing": {
+      "sr": 16000,
+      "spectrogram": {
+        "type": "MelSpectrogram",
+        "args": {
+        }
+      },
+      "log_spec": true
+    },
+    "text_encoder": {
+      "type": "CTCCharTextEncoder",
+      "args": {}    
+    },
+    "augmentations": {
+      "wave": [
+        {"type": "Gain", "args": {"p": 0.1, "min_gain_in_db": -10.0, "max_gain_in_db":  5.0}}
+      ]
+    },
+    "arch": {
+      "type": "DeepSpeech2",
+      "args": {
+        "n_feats": 128,
+        "fc_hidden": 32,
+        "rnn_hidden_size" : 16
+      }
+    },
+    "data": {
+      "train": {
+        "batch_size": 64,
+        "num_workers": 0,
+        "datasets": [
+          {
+            "type": "LibrispeechDataset",
+            "args": {
+              "part": "train-clean-100",
+              "max_audio_length": 20.0,
+              "max_text_length": 200
+            }
+          }
+        ]
+      },
+      "val": {
+        "batch_size": 64,
+        "num_workers": 0,
+        "datasets": [
+          {
+            "type": "LibrispeechDataset",
+            "args": {
+              "part": "test-clean",
+              "max_audio_length": 20.0,
+              "max_text_length": 200
+            }
+          }
+        ]
+      }
+    },
+    "optimizer": {
+      "type": "Adam",
+      "args": {
+        "lr": 1e-2
+      }
+    },
+    "loss": {
+      "type": "CTCLoss",
+      "args": {}
+    },
+    "metrics": [
+      {
+        "type": "ArgmaxWERMetric",
+        "args": {
+          "name": "WER (argmax)"
+        }
+      },
+      {
+        "type": "ArgmaxCERMetric",
+        "args": {
+          "name": "CER (argmax)"
+        }
+      }
+    ],
+    "lr_scheduler": {
+      "type": "OneCycleLR",
+      "args": {
+        "steps_per_epoch": 10,
+        "epochs": 4,
+        "anneal_strategy": "cos",
+        "max_lr": 1e-2,
+        "pct_start": 0.2
+      }
+    },
+    "trainer": {
+      "epochs": 3,
+      "save_dir": "saved/",
+      "save_period": 5,
+      "verbosity": 2,
+      "monitor": "min val_loss",
+      "early_stop": 10,
+      "visualize": "wandb",
+      "wandb_project": "asr_project",
+      "len_epoch": 10,
+      "grad_norm_clip": 10
+    }
+  }

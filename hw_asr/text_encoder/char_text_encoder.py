@@ -10,10 +10,12 @@ from hw_asr.base.base_text_encoder import BaseTextEncoder
 
 
 class CharTextEncoder(BaseTextEncoder):
+    EMPTY_TOK = "^"
 
     def __init__(self, alphabet: List[str] = None):
         if alphabet is None:
             alphabet = list(ascii_lowercase + ' ')
+            alphabet.append(self.EMPTY_TOK)
         self.alphabet = alphabet
         self.ind2char = {k: v for k, v in enumerate(sorted(alphabet))}
         self.char2ind = {v: k for k, v in self.ind2char.items()}

@@ -11,7 +11,7 @@ from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
-
+from hw_asr.text_encoder.char_text_encoder import CharTextEncoder
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 
 
@@ -23,10 +23,8 @@ def main(config, out_file):
 
     # text_encoder
     text_encoder = config.get_text_encoder()
-
     # setup data_loader instances
     dataloaders = get_dataloaders(config, text_encoder)
-
     # build model architecture
     model = config.init_obj(config["arch"], module_model, n_class=len(text_encoder))
     logger.info(model)
