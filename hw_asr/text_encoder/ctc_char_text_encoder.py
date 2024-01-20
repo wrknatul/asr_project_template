@@ -2,6 +2,7 @@ from typing import List, NamedTuple
 import numpy as np
 import heapq
 import torch
+from collections import defaultdict
 
 from .char_text_encoder import CharTextEncoder
 from hw_asr.base.base_text_encoder import BaseTextEncoder
@@ -36,51 +37,39 @@ class CTCCharTextEncoder(CharTextEncoder):
         return result
 
     def ctc_beam_search(self, probs: torch.tensor, probs_length,
-                        beam_size: int = 100) -> List[Hypothesis]:
+                        beam_size: int = 100, **kwargs) -> List[Hypothesis]:
         """
         Performs beam search and returns a list of pairs (hypothesis, hypothesis probability).
         """
         assert len(probs.shape) == 2
         probs = probs[:probs_length]
         char_length, voc_size = probs.shape
-        assert char_length == probs_length
-        probs = torch.exp(probs)
-
         assert voc_size == len(self.ind2char)
-        state: dict[tuple[str, str], float] = {('', self.EMPTY_TOK): 1.0}
-        best_prefixes: dict[str, float] = {'': 1.0}
 
+        def _extend_and_merge(frame_distr, state_dict):
+            new_state_dict = defaultdict(float)
+            for next_char_index, next_char_proba in enumerate(frame_distr):
+                for (pref, last_char), pref_proba in state_dict.items():
+                    next_char = self.ind2char[next_char_index]
+                    if next_char == last_char:
+                        new_pref = pref
+                    else:
+                        if next_char != self.EMPTY_TOK:
+                            new_pref = pref + next_char
+                        else:
+                            new_pref = pref
+                        last_char = next_char
+                    new_state_dict[(new_pref, last_char)] += pref_proba * next_char_proba
+            return new_state_dict
+        def _truncate(state_dict):
+            state_list = list(state_dict.items())
+            return dict(sorted(state_list, key=lambda x: -x[1].item())[:beam_size])
 
-        # for probs_for_time_t in probs:
-        #     # Remove unlikely prefixes
-        #     state = self._truncate_state_to_best_prefixes(state, best_prefixes)
-             
-        #     # Do 1 dynamical programming step
-        #     state = self._extend_and_merge(probs_for_time_t, state)
-        #     # Calculate the prefixes with highest probabilities
-        #     best_prefixes = self._get_best_prefixes(state, beam_size)
+        state = {('', self.EMPTY_TOK): 1.0}
+        for frame in probs:
+            state = _extend_and_merge(frame, state)
+            state = _truncate(state)
 
-
-        for probs_for_time_t in probs:
-            state_new = {}
-            for (pref, last_char), pref_prob in state.items():
-                if pref in best_prefixes:
-                    state_new.update({(pref, last_char): pref_prob})
-            state = state_new
-            next_values = {}
-            for char_ind, proba_ in enumerate(probs_for_time_t.tolist()):
-                for (pref, last_char), pref_prob in state.items():
-                    new_pref = pref
-                    end_char = self.ind2char[char_ind]
-                    if end_char != last_char and end_char != self.EMPTY_TOK:
-                        new_pref += end_char
-                    next_values[(new_pref, end_char)] = next_values.get((new_pref, end_char), 0) + pref_prob * proba_
-            state = next_values
-            print(probs_for_time_t)
-            assert len(next_values) != 0
-            
-            best_prefixes = {val for val in heapq.nlargest(beam_size, state.items(), key=lambda i: i[1])}
-        
-        hypos = [Hypothesis(self._correct_sentence(prefix), prob) for prefix, prob in best_prefixes.items()]
+        hypos: List[Hypothesis] = [Hypothesis(seq, prob) for (seq, _), prob in state.items()]
         return sorted(hypos, key=lambda x: x.prob, reverse=True)
     
