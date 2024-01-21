@@ -18,8 +18,7 @@
     "type": "DeepSpeech2",
     "args": {
       "n_feats": 128,
-      "fc_hidden": 64,
-      "rnn_hidden_size" : 16
+      "rnn_hidden_size": 64
     }
   },
   "data": {

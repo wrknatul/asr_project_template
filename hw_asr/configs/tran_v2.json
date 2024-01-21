@@ -1,5 +1,5 @@
 {
-    "name": "train_big_data",
+    "name": "one_batch_test",
     "n_gpu": 1,
     "preprocessing": {
       "sr": 16000,
@@ -10,20 +10,15 @@
       },
       "log_spec": true
     },
-    "text_encoder": {
-      "type": "CTCCharTextEncoder",
-      "args": {}    
-    },
     "augmentations": {
-      "wave": [
-        {"type": "Gain", "args": {"p": 0.1, "min_gain_in_db": -10.0, "max_gain_in_db":  5.0}}
-      ]
+      "wave": [],
+      "spectrogram": []
     },
     "arch": {
       "type": "DeepSpeech2",
       "args": {
         "n_feats": 128,
-        "fc_hidden": 512
+        "rnn_hidden_size": 64
       }
     },
     "data": {
@@ -73,10 +68,14 @@
         ]
       }
     },
+    "text_encoder": {
+      "type": "CTCCharTextEncoder",
+      "args": {}    
+    },
     "optimizer": {
-      "type": "Adam",
+      "type": "SGD",
       "args": {
-        "lr": 5e-4
+        "lr": 1e-2
       }
     },
     "loss": {
@@ -100,10 +99,10 @@
     "lr_scheduler": {
       "type": "OneCycleLR",
       "args": {
-        "steps_per_epoch": 1000,
-        "epochs": 60,
+        "steps_per_epoch": 100,
+        "epochs": 4,
         "anneal_strategy": "cos",
-        "max_lr": 5e-4,
+        "max_lr": 1e-2,
         "pct_start": 0.2
       }
     },
