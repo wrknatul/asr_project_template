@@ -29,10 +29,9 @@
           {
             "type": "LibrispeechDataset",
             "args": {
-              "part": "dev-clean",
+              "part": "train",
               "max_audio_length": 20.0,
-              "max_text_length": 200,
-              "limit": 10
+              "max_text_length": 200
             }
           }
         ]
@@ -46,8 +45,7 @@
             "args": {
               "part": "dev-clean",
               "max_audio_length": 20.0,
-              "max_text_length": 200,
-              "limit": 10
+              "max_text_length": 200
             }
           }
         ]
@@ -59,10 +57,9 @@
           {
             "type": "LibrispeechDataset",
             "args": {
-              "part": "dev-clean",
+              "part": "test",
               "max_audio_length": 20.0,
-              "max_text_length": 200,
-              "limit": 20
+              "max_text_length": 200
             }
           }
         ]
@@ -107,15 +104,15 @@
       }
     },
     "trainer": {
-      "epochs": 60,
+      "epochs": 5,
       "save_dir": "saved/",
       "save_period": 5,
       "verbosity": 2,
       "monitor": "min val_loss",
-      "early_stop": 1000,
+      "early_stop": 100,
       "visualize": "wandb",
       "wandb_project": "asr_project",
-      "len_epoch": 1000,
+      "len_epoch": 100,
       "grad_norm_clip": 10
     }
   }

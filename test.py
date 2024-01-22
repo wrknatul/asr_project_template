@@ -11,11 +11,12 @@ from hw_asr.trainer import Trainer
 from hw_asr.utils import ROOT_PATH
 from hw_asr.utils.object_loading import get_dataloaders
 from hw_asr.utils.parse_config import ConfigParser
-from hw_asr.text_encoder.char_text_encoder import CharTextEncoder
+from hw_asr.metric.utils import calc_wer, calc_cer
+
 DEFAULT_CHECKPOINT_PATH = ROOT_PATH / "default_test_model" / "checkpoint.pth"
 
 
-def main(config, out_file):
+def main(config, out_file, beam_size):
     logger = config.get_logger("test")
 
     # define cpu or gpu if possible
@@ -23,8 +24,10 @@ def main(config, out_file):
 
     # text_encoder
     text_encoder = config.get_text_encoder()
+
     # setup data_loader instances
     dataloaders = get_dataloaders(config, text_encoder)
+
     # build model architecture
     model = config.init_obj(config["arch"], module_model, n_class=len(text_encoder))
     logger.info(model)
@@ -59,14 +62,31 @@ def main(config, out_file):
             for i in range(len(batch["text"])):
                 argmax = batch["argmax"][i]
                 argmax = argmax[: int(batch["log_probs_length"][i])]
-                results.append(
-                    {
-                        "ground_trurh": batch["text"][i],
-                        "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
-                        "pred_text_beam_search": text_encoder.ctc_beam_search(
-                            batch["probs"][i], batch["log_probs_length"][i])[0].text,
-                    }
-                )
+                current_texts = {
+                    "ground_truth": batch["text"][i],
+                    "ground_truth_normalized": text_encoder.normalize_text(batch["text"][i]),
+                    "pred_text_argmax": text_encoder.ctc_decode(argmax.cpu().numpy()),
+                    "pred_text_beam_search": text_encoder.ctc_beam_search(
+                        batch["probs"][i], batch["log_probs_length"][i], beam_size=beam_size
+                    )[:10],
+                }
+
+                current_texts["WER_argmax"] = calc_wer(current_texts["ground_truth_normalized"], 
+                                                       current_texts["pred_text_argmax"])
+                current_texts["WER_beam_search"] = calc_wer(current_texts["ground_truth_normalized"], 
+                                                            current_texts["pred_text_beam_search"][0].text)
+
+                current_texts["CER_argmax"] = calc_cer(current_texts["ground_truth_normalized"], 
+                                                       current_texts["pred_text_argmax"])
+                current_texts["CER_beam_search"] = calc_cer(current_texts["ground_truth_normalized"], 
+                                                            current_texts["pred_text_beam_search"][0].text)
+
+                results.append(current_texts)
+
+    for metric in ["WER_argmax", "WER_beam_search", "CER_argmax", "CER_beam_search"]:
+        mean_val = sum([x[metric] for x in results]) / len(results)
+        print(f"{metric:12}: {mean_val:.4f}")
+
     with Path(out_file).open("w") as f:
         json.dump(results, f, indent=2)
 
@@ -122,6 +142,12 @@ if __name__ == "__main__":
         type=int,
         help="Number of workers for test dataloader",
     )
+    args.add_argument(
+        "--beam-size",
+        default=100,
+        type=int,
+        help="Number of workers for test dataloader",
+    )
 
     args = args.parse_args()
 
@@ -166,4 +192,4 @@ if __name__ == "__main__":
     config["data"]["test"]["batch_size"] = args.batch_size
     config["data"]["test"]["n_jobs"] = args.jobs
 
-    main(config, args.output)
+    main(config, args.output, args.beam_size)
