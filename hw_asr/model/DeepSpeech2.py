@@ -23,7 +23,7 @@ class maskCNN(nn.Module):
         super().__init__()
         self.sequential = sequential_
 
-    def forward(self, inputs: torch.Tensor, seq_lengths: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, inputs: torch.Tensor, seq_lengths: torch.Tensor):
         
         output = None
         for module in self.sequential:
@@ -81,7 +81,7 @@ class ConvolutionsModule(nn.Module):
         )
         self.output_size = self.mask_conv.get_output_size(n_feats)
 
-    def forward(self, spectrogram: torch.Tensor, spectrogram_length: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spectrogram: torch.Tensor, spectrogram_length: torch.Tensor):
         outputs, output_lengths = self.mask_conv(spectrogram.unsqueeze(1), spectrogram_length)
         batch_size, channels, features, time = outputs.size()
         outputs = outputs.permute(0, 3, 1, 2)
@@ -116,7 +116,7 @@ class DeepSpeech2(BaseModel):
         self.batch_norm = nn.BatchNorm1d(rnn_output_size)
         self.fc = nn.Linear(rnn_output_size, n_class, bias=False)
 
-    def forward(self, spectrogram: torch.Tensor, spectrogram_length: torch.Tensor, **batch) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, spectrogram: torch.Tensor, spectrogram_length: torch.Tensor, **batch):
         outputs, output_lengths = self.conv(spectrogram, spectrogram_length)
         outputs = outputs.permute(1, 0, 2).contiguous()
         for rnn_layer in self.rnn_layers:
